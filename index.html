@@ -8,7 +8,7 @@
   
   <style>
     /* =========================================
-       1. OPENSEA LIGHT THEME VARIABLES
+       1. VARIABLES
        ========================================= */
     :root {
       --os-bg: #ffffff;
@@ -29,7 +29,7 @@
       background-color: var(--os-bg);
       color: var(--os-text);
       min-height: 100vh;
-      overflow-x: hidden; /* Scrollbar problemini həll edir */
+      overflow-x: hidden;
     }
 
     /* =========================================
@@ -60,14 +60,12 @@
     }
     .logo span { color: var(--os-blue); }
 
-    /* Buttons Container */
     .nav-actions {
         display: flex;
         gap: 10px;
         align-items: center;
     }
 
-    /* View Toggle Button (YENİ) */
     .view-toggle-btn {
         background: transparent;
         border: 1px solid var(--os-border);
@@ -110,19 +108,14 @@
         border: 1px solid var(--os-border); 
         box-shadow: none;
     }
-    .wallet-btn.disconnect:hover { 
-        border-color: #ccc; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-    }
 
-    /* Mobil üçün düzəlişlər (Navbar) */
     @media (max-width: 600px) {
         .navbar { padding: 0 15px; }
-        .logo span { display: none; } /* Mobildə yer tutmasın deyə yazını gizlədə bilərsən, istəsən sil bu sətri */
-        .logo:before { content: "🦍"; font-size: 28px; } /* Mobildə sadəcə logo */
+        .logo span { display: none; }
+        .logo:before { content: "🦍"; font-size: 28px; }
         .wallet-btn { padding: 8px 14px; font-size: 13px; }
         .view-toggle-btn { padding: 8px; }
-        .view-toggle-btn span { display: none; } /* Mobildə yazı gizlənir, sadəcə ikon qalır */
+        .view-toggle-btn span { display: none; }
     }
 
     /* =========================================
@@ -170,6 +163,7 @@
       position: relative;
       display: flex;
       flex-direction: column;
+      height: 100%; /* Kartların eyni hündürlükdə olması üçün */
     }
 
     .nft-card:hover {
@@ -218,12 +212,19 @@
     .card-details {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
-      margin-top: auto;
+      align-items: center;
+      margin-top: auto; 
+      min-height: 24px;
     }
 
-    .price-label { font-size: 11px; color: var(--os-subtext); font-weight: 500; margin-bottom: 2px; }
-    .price-val { font-size: 14px; font-weight: 600; color: var(--os-text); }
+    /* QİYMƏT DİZAYNI */
+    .price-val { 
+      font-size: 16px; 
+      font-weight: 700; 
+      color: var(--os-text);
+      display: flex;
+      align-items: center;
+    }
 
     /* =========================================
        6. ACTION BUTTONS
@@ -239,6 +240,7 @@
     
     .nft-card:hover .card-actions { opacity: 1; transform: translateY(0); }
     
+    /* Mobildə həmişə görünsün */
     @media (max-width: 768px) { .card-actions { opacity: 1; transform: translateY(0); } }
 
     .mini-input {
@@ -251,7 +253,6 @@
       outline: none;
       font-family: inherit;
     }
-    .mini-input:focus { border-color: var(--os-blue); }
 
     .action-btn {
       width: 100%;
@@ -401,10 +402,6 @@
       <div class="skeleton sk-card"></div>
       <div class="skeleton sk-card"></div>
       <div class="skeleton sk-card"></div>
-      <div class="skeleton sk-card"></div>
-      <div class="skeleton sk-card"></div>
-      <div class="skeleton sk-card"></div>
-      <div class="skeleton sk-card"></div>
     </div>
   </div>
 
@@ -418,47 +415,34 @@
   </div>
 
   <script>
-    // 1. Meta tag-i tapırıq
+    // View Toggle Logikası
     const viewportMeta = document.getElementById('viewportMeta');
     const viewBtn = document.getElementById('viewToggleBtn');
     const viewIcon = document.getElementById('viewIcon');
     const viewText = document.getElementById('viewText');
-
-    // 2. Yaddaşdan (localStorage) son seçimi oxuyuruq
     let currentMode = localStorage.getItem('siteViewMode') || 'mobile';
 
-    // 3. Modu tətbiq etmə funksiyası
     function applyViewMode(mode) {
         if (mode === 'desktop') {
-            // Masaüstü rejimi: Eni 1280px-ə məcbur edirik
             viewportMeta.setAttribute('content', 'width=1280, user-scalable=yes');
             viewIcon.innerText = "📱";
             viewText.innerText = "Mobil";
-            viewBtn.style.backgroundColor = "#eef"; // Aktiv olduğunu göstərmək üçün rəng
+            viewBtn.style.backgroundColor = "#eef"; 
             viewBtn.style.borderColor = "#ccf";
         } else {
-            // Mobil rejimi: Standart responsivlik
             viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.0');
             viewIcon.innerText = "💻";
             viewText.innerText = "Masaüstü";
             viewBtn.style.backgroundColor = "transparent";
             viewBtn.style.borderColor = "var(--os-border)";
         }
-        // Seçimi yadda saxla
         localStorage.setItem('siteViewMode', mode);
         currentMode = mode;
     }
 
-    // 4. Düymə basılanda işləyən funksiya
     function toggleViewMode() {
-        if (currentMode === 'mobile') {
-            applyViewMode('desktop');
-        } else {
-            applyViewMode('mobile');
-        }
+        applyViewMode(currentMode === 'mobile' ? 'desktop' : 'mobile');
     }
-
-    // 5. Sayt açılanda yaddaşdakı modu tətbiq et
     applyViewMode(currentMode);
   </script>
 
