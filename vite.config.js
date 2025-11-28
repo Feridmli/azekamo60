@@ -9,11 +9,12 @@ export default defineConfig({
     },
   },
   define: {
-    global: "window",
+    // Browser mühiti üçün global obyektini window-a bağlayırıq
+    global: "window", 
   },
   build: {
     outDir: "dist",
-    chunkSizeWarningLimit: 2000,
+    target: "esnext", // Modern JS dəstəyi
     rollupOptions: {
       input: path.resolve(__dirname, "index.html"),
     },
