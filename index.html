@@ -19,26 +19,33 @@
     }
     .main-card { width:90%; max-width:1100px; background:rgba(255,255,255,0.03); border-radius:18px; padding:24px; text-align:center; }
     .topbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap: wrap; }
+    
     .wallet-btn { background:linear-gradient(135deg,#ff6a00,#ee0979); color:#fff; padding:10px 18px; border:none; border-radius:50px; cursor:pointer; font-weight:700; transition:all .15s ease; }
     .wallet-btn:active { transform:scale(.98); }
+    .wallet-btn:hover { opacity: 0.9; }
     
     /* Update button üçün mavi rəng */
     .update-btn { background:linear-gradient(135deg,#00c6ff,#0072ff) !important; }
+    /* Buy button üçün yaşıl rəng */
+    .buy-btn { background:linear-gradient(135deg,#11998e,#38ef7d) !important; }
 
-    #notice { margin-top:10px; opacity:0.8; color: #ffd27a; min-height: 20px;}
-    #addr { margin-top:8px; opacity:0.8; font-family: monospace; }
+    #notice { margin-top:10px; opacity:0.8; color: #ffd27a; min-height: 20px; font-weight: bold;}
+    #addr { margin-top:8px; opacity:0.8; font-family: monospace; font-size: 0.9em; color: #aaa; }
+    
     .marketplace { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px; margin-top:22px; }
-    .nft-card { background:rgba(255,255,255,0.04); border-radius:12px; padding:12px; backdrop-filter:blur(6px); display:flex; flex-direction:column; align-items:stretch; border: 1px solid rgba(255,255,255,0.05); }
-    .nft-card img { width:100%; height:200px; object-fit:cover; border-radius:8px; }
+    
+    .nft-card { background:rgba(255,255,255,0.04); border-radius:12px; padding:12px; backdrop-filter:blur(6px); display:flex; flex-direction:column; align-items:stretch; border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s; }
+    .nft-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.1); }
+    
+    .nft-card img { width:100%; height:200px; object-fit:cover; border-radius:8px; background: #111; }
     .nft-card h4 { margin:12px 0 6px 0; color:#ffd27a; font-size:16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .nft-card p { margin:0; color:#fff; opacity:0.85; font-size:14px; margin-bottom: 10px; }
     
-    .nft-actions { display:flex; justify-content:space-between; align-items:center; margin-top:auto; gap:8px; flex-wrap:wrap; }
-    .price-input { width:70px; padding:8px; border-radius:6px; border:none; text-align:center; background: #222; color: #fff; flex-grow: 1; }
+    .nft-actions { display:flex; justify-content:space-between; align-items:center; margin-top:auto; gap:8px; flex-wrap:wrap; min-height: 40px; }
+    .price-input { width:70px; padding:8px; border-radius:6px; border:none; text-align:center; background: #222; color: #fff; flex-grow: 1; outline: none; border: 1px solid #333; }
+    .price-input:focus { border-color: #ff6a00; }
     .price { font-weight:700; color:#a3ffba; font-size: 15px; }
   </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
 <div class="main-card">
@@ -46,7 +53,7 @@
     <h1 style="margin:0">Marketplace (ApeChain)</h1>
     <div>
       <button class="wallet-btn" id="connectBtn">Cüzdanı qoş</button>
-      <button class="wallet-btn" id="disconnectBtn" style="display:none;background:#333;">Bağlantını kəs</button>
+      <button class="wallet-btn" id="disconnectBtn" style="display:none;background:#333 !important;">Bağlantını kəs</button>
     </div>
   </div>
 
@@ -58,6 +65,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script type="module" src="/main.js"></script>
 </body>
 </html>
