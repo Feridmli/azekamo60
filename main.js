@@ -162,7 +162,7 @@ disconnectBtn.onclick = () => {
 connectBtn.onclick = connectWallet;
 
 // ==========================================
-// NFT YÜKLƏMƏ (DÜZƏLDİLMİŞ LOGİKA)
+// NFT YÜKLƏMƏ (DÜZƏLDİLMİŞ STATUS MƏNTİQİ)
 // ==========================================
 
 let loadingNFTs = false;
@@ -199,14 +199,14 @@ async function loadNFTs() {
       let priceVal = 0;
       let isListed = false;
 
-      // 1. NFT satışdadırmı? (Qiymət varmı?)
+      // 1. NFT satışdadırmı?
       if (nft.price && parseFloat(nft.price) > 0) {
         priceVal = parseFloat(nft.price);
         displayPrice = `Qiymət: ${priceVal} APE`;
         isListed = true;
       }
 
-      // 2. Blockchain sahibi
+      // 2. Blockchain Sahibi (Həlledici Faktor)
       let realOwner = null;
       if (nftContractRead) {
           try {
@@ -214,43 +214,44 @@ async function loadNFTs() {
           } catch(e) { console.warn(`Check failed: ${tokenid}`); }
       }
 
-      // 3. İstifadəçi statusları
-      // isMine: Blockchain-də sahibi mənəm
+      // 3. Statusların Təyini
+      // isMine: Blockchain-dəki sahib MƏNƏM (Seaport-da list olunsa belə, sahib siz qalırsınız)
       const isMine = (userAddress && realOwner && userAddress.toLowerCase() === realOwner.toLowerCase());
-      // isSeller: Saytda bunu mən satışa qoymuşam (DB-də satıcı mənəm)
+      
+      // isSeller: DB-dəki satıcı MƏNƏM (Ehtiyat üçün)
       const isSeller = (userAddress && nft.seller_address && userAddress.toLowerCase() === nft.seller_address.toLowerCase());
+
+      // ƏSAS DÜZƏLİŞ: Əgər Blockchain sahibi mənəmsə VƏ YA DB satıcısı mənəmsə -> Mən bu NFT-ni idarə edirəm.
+      const canManage = isMine || isSeller;
 
       const card = document.createElement("div");
       card.className = "nft-card";
       
       let actionsHTML = "";
 
-      // --- LOGİKA BURADA DƏYİŞDİRİLDİ ---
-      
+      // --- MƏNTİQ ---
       if (isListed) {
-          // Əgər satışdadırsa:
-          if (isSeller) {
-              // A) Satıcı MƏNƏM (Buy düyməsi olmasın, New List olsun)
-              // Update button class-ını saxlayırıq ki, aşağıda event listener işləsin, amma adını "New List" qoyuruq
+          if (canManage) {
+              // Satışdadır VƏ Sahibi mənəm -> "New List" (Update)
               actionsHTML = `
                 <input type="number" placeholder="New Price" class="price-input" step="0.001">
                 <button class="wallet-btn update-btn" style="flex-grow:1;">New List</button>
               `;
           } else {
-              // B) Satıcı BAŞQASIDIR (Buy düyməsi olsun)
+              // Satışdadır VƏ Sahibi mən deyiləm -> "Buy"
               actionsHTML = `<button class="wallet-btn buy-btn" style="width:100%">Buy</button>`;
           }
       } else {
-          // Əgər satışda deyilsə:
-          if (isMine) {
-              // C) Sahibi MƏNƏM (List düyməsi olsun)
+          // Satışda deyil
+          if (canManage) {
+              // Satışda deyil VƏ Sahibi mənəm -> "List"
               displayPrice = "Satışda deyil";
               actionsHTML = `
                  <input type="number" placeholder="Price" class="price-input" step="0.001">
                  <button class="wallet-btn list-btn" style="flex-grow:1;">List</button>
               `;
-          } 
-          // D) Sahibi mən deyiləm və satışda deyil -> Boş qalsın
+          }
+          // Satışda deyil və sahibi mən deyiləm -> Boş
       }
 
       card.innerHTML = `
@@ -266,22 +267,21 @@ async function loadNFTs() {
       // Event Listeners
       if (actionsHTML !== "") {
           if (isListed) {
-              if (isSeller) {
-                 // OWNER: Update Logic ("New List" düyməsi)
+              if (canManage) {
+                 // UPDATE / NEW LIST logic
                  const btn = card.querySelector(".update-btn");
                  if(btn) btn.onclick = async () => {
                      const inp = card.querySelector(".price-input").value;
                      if(!inp) return notify("Yeni qiymət daxil edin");
-                     // Update edəndə də listNFT çağırırıq, bu yeni order yaradır
                      await listNFT(tokenid, ethers.utils.parseEther(inp), "Qiymət yeniləndi");
                  };
               } else {
-                 // BUYER: Buy Logic
+                 // BUY logic
                  const btn = card.querySelector(".buy-btn");
                  if(btn) btn.onclick = async () => await buyNFT(nft);
               }
-          } else if (isMine) {
-              // OWNER: First List Logic
+          } else if (canManage) {
+              // FIRST LIST logic
               const btn = card.querySelector(".list-btn");
               if(btn) btn.onclick = async () => {
                  const inp = card.querySelector(".price-input").value;
@@ -308,9 +308,14 @@ async function buyNFT(nftRecord) {
   
   try {
     const buyerAddress = await signer.getAddress();
-    if (nftRecord.seller_address?.toLowerCase() === buyerAddress.toLowerCase()) {
-        return alert("Öz NFT-nizi ala bilməzsiniz.");
-    }
+    // Blockchain yoxlanışı (Client-side qoruma)
+    const nftContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, ["function ownerOf(uint256) view returns (address)"], provider);
+    try {
+        const owner = await nftContract.ownerOf(nftRecord.tokenid);
+        if (owner.toLowerCase() === buyerAddress.toLowerCase()) {
+            return alert("Bu NFT artıq sizindir! Səhifəni yeniləyin.");
+        }
+    } catch(e) {}
 
     notify("Order emal edilir...");
 
@@ -325,8 +330,10 @@ async function buyNFT(nftRecord) {
     if (!cleanOrd) return alert("Order strukturu xətalıdır.");
 
     const seller = cleanOrd.parameters.offerer;
-    const nftContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, ["function isApprovedForAll(address,address) view returns(bool)"], provider);
-    const approved = await nftContract.isApprovedForAll(seller, SEAPORT_CONTRACT_ADDRESS);
+    
+    // Satıcı icazəsini yoxla
+    const nftApprovedContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, ["function isApprovedForAll(address,address) view returns(bool)"], provider);
+    const approved = await nftApprovedContract.isApprovedForAll(seller, SEAPORT_CONTRACT_ADDRESS);
     if (!approved) return alert("Satıcı icazəni ləğv edib.");
 
     notify("Tranzaksiya hazırlanır...");
