@@ -8,7 +8,7 @@ import { Seaport } from "@opensea/seaport-js";
 // KONFIQURASIYA
 // ==========================================
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://azekamo50.onrender.com";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://azekamo60.onrender.com";
 const NFT_CONTRACT_ADDRESS = import.meta.env.VITE_NFT_CONTRACT || "0x54a88333F6e7540eA982261301309048aC431eD5";
 // Seaport 1.5 Canonical Address (ApeChain və digər EVM-lərdə standartdır)
 const SEAPORT_CONTRACT_ADDRESS = "0x0000000000000068F116a894984e2DB1123eB395";
