@@ -81,7 +81,7 @@ function cleanOrder(orderData) {
         zone: parameters.zone,
         // Offer item-ləri təmizlə
         offer: parameters.offer.map(item => ({
-          itemType: Number(item.itemType), // Mütləq Number
+          itemType: Number(item.itemType), 
           token: item.token,
           identifierOrCriteria: toStr(item.identifierOrCriteria || item.identifier),
           startAmount: toStr(item.startAmount),
@@ -89,14 +89,14 @@ function cleanOrder(orderData) {
         })),
         // Consideration item-ləri təmizlə
         consideration: parameters.consideration.map(item => ({
-          itemType: Number(item.itemType), // Mütləq Number
+          itemType: Number(item.itemType), 
           token: item.token,
           identifierOrCriteria: toStr(item.identifierOrCriteria || item.identifier),
           startAmount: toStr(item.startAmount),
           endAmount: toStr(item.endAmount),
           recipient: item.recipient
         })),
-        orderType: Number(parameters.orderType), // 0,1,2...
+        orderType: Number(parameters.orderType), 
         startTime: toStr(parameters.startTime),
         endTime: toStr(parameters.endTime),
         zoneHash: parameters.zoneHash,
@@ -356,7 +356,7 @@ if(bulkListBtn) {
 }
 
 // ==========================================
-// TOPLU LISTƏLƏMƏ
+// TOPLU LISTƏLƏMƏ (FIXED: STARTAMOUNT/ENDAMOUNT)
 // ==========================================
 
 async function bulkListNFTs(tokenIds, priceWei) {
@@ -364,7 +364,7 @@ async function bulkListNFTs(tokenIds, priceWei) {
     
     const seller = await signer.getAddress();
 
-    // 1. APPROVAL (ICAZƏ) YOXLANIR
+    // 1. APPROVAL
     try {
         const nftContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, 
             ["function isApprovedForAll(address,address) view returns(bool)", "function setApprovalForAll(address,bool)"], signer);
@@ -392,7 +392,9 @@ async function bulkListNFTs(tokenIds, priceWei) {
                     itemType: 0, // NATIVE APE
                     token: ZERO_ADDRESS, 
                     identifier: "0", 
-                    amount: priceWei.toString(), 
+                    // [DÜZƏLİŞ] `amount` yox, `startAmount` və `endAmount` istifadə olunur
+                    startAmount: priceWei.toString(), 
+                    endAmount: priceWei.toString(),
                     recipient: seller 
                 }],
                 startTime: (Math.floor(Date.now()/1000)).toString(),
@@ -445,7 +447,7 @@ async function listNFT(tokenid, priceWei) {
 }
 
 // ==========================================
-// BUY FUNCTION (FIXED: APPROVAL CHECK REMOVED)
+// BUY FUNCTION (FIXED: VALUE CALCULATION & DEBUG)
 // ==========================================
 
 async function buyNFT(nftRecord) {
@@ -473,13 +475,12 @@ async function buyNFT(nftRecord) {
         const cleanOrd = cleanOrder(rawJson);
         if (!cleanOrd) return alert("Order strukturu xətalıdır");
 
-        // DİQQƏT: Buradakı 'isApprovedForAll' yoxlamasını sildik.
-        // Səbəb: Satıcı yalnız tək NFT-yə icazə vermiş ola bilər.
-        // Bu yoxlamanı Seaport 'fulfillOrder' zamanı özü edəcək.
+        // [DEBUG]
+        console.log("Cleaned Order for Buy:", cleanOrd);
 
         notify("Tranzaksiya hazırlanır...");
         
-        // Seaport fulfill (İcazə yoxdursa burada xəta verəcək)
+        // Seaport fulfill
         const { actions } = await seaport.fulfillOrder({ 
             order: cleanOrd, 
             accountAddress: buyerAddress 
@@ -487,22 +488,33 @@ async function buyNFT(nftRecord) {
 
         const txRequest = await actions[0].transactionMethods.buildTransaction();
 
-        // Transaction dəyərini (Value) düzgün hesabla
+        // [DEBUG]
+        console.log("Raw Tx Request:", txRequest);
+
+        // [DÜZƏLİŞ] Transaction dəyərini (Value) düzgün hesabla
         let finalValue = ethers.BigNumber.from(0);
 
+        // 1. Birbaşa txRequest.value-nu yoxla
         if (txRequest.value) {
             finalValue = ethers.BigNumber.from(txRequest.value.toString());
         }
 
-        // Əgər value hələ də 0-dırsa, qiyməti consideration-dan tap
+        // 2. Əgər hələ də 0-dırsa, Consideration-dan NATIVE (ItemType 0) qiyməti tap
         if (finalValue.eq(0) && cleanOrd.parameters.consideration) {
             cleanOrd.parameters.consideration.forEach(c => {
                 // ItemType 0 = Native Token (APE)
                 if (Number(c.itemType) === 0) { 
-                    const amount = c.endAmount ? c.endAmount.toString() : "0";
+                    // Order sabit qiymətlidirsə startAmount əsasdır
+                    const amount = c.startAmount || c.endAmount || "0";
                     finalValue = finalValue.add(ethers.BigNumber.from(amount));
                 }
             });
+        }
+        
+        console.log("Final Calculated Value:", finalValue.toString());
+
+        if (finalValue.eq(0)) {
+            console.warn("DİQQƏT: Transaction Value 0 olaraq qaldı. Bu pulsuz bir order ola bilər və ya sehv hesablandı.");
         }
 
         // Gas limit hesabla
@@ -517,7 +529,6 @@ async function buyNFT(nftRecord) {
             gasLimit = est.mul(120).div(100); 
         } catch(e) {
             console.warn("Gas estimate failed (likely approval missing or balance low):", e);
-            // Xüsusi xəta mesajı qaytara bilərik, amma davam edək
         }
 
         notify("Metamask-da təsdiqləyin...");
@@ -545,8 +556,7 @@ async function buyNFT(nftRecord) {
         setTimeout(() => location.reload(), 2000);
 
     } catch (err) {
-        console.error(err);
-        // Xəta mesajlarını daha aydın göstər
+        console.error("Buy Error Details:", err);
         let msg = err.message || err;
         if (msg.includes("insufficient funds")) msg = "Balansınız kifayət etmir.";
         else if (msg.includes("user rejected")) msg = "Ləğv edildi.";
